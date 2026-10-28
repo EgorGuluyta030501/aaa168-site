@@ -2,3 +2,7 @@
 _исходники/
 .DS_Store
 Thumbs.db
+# служебные файлы Claude Code и скиллов — не часть сайта
+.agents/
+.claude/
+skills-lock.json

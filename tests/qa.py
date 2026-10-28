@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-URL = sys.argv[1] if len(sys.argv) > 1 else "https://egorguluyta030501.github.io/aaa168-cargo/"
+URL = sys.argv[1] if len(sys.argv) > 1 else "https://egorguluyta030501.github.io/aaa168-site/"
 WA = "8615604281718"
 results = []
 
@@ -143,6 +143,28 @@ with sync_playwright() as p:
         n_rev = page.evaluate("document.querySelectorAll('#reviews-list .shot').length")
         n_vid = page.evaluate("document.querySelectorAll('#warehouse-list .vcard').length")
         check(P + "7 отзывов и 6 видео склада", n_rev == 7 and n_vid == 6, f"{n_rev} отзывов, {n_vid} видео")
+        hv = page.evaluate("(() => { const v = document.querySelector('#hero-video'); return [v.currentSrc.split('/').pop(), v.paused, v.readyState] })()")
+        check(P + "фоновое видео главного экрана играет",
+              hv[0] == ("hero-mobile.mp4" if mobile else "hero.mp4") and hv[2] >= 2, str(hv))
+        n_blocks = page.evaluate("['#advantages-list .perk', '#transport-list .mode', '#cargo-list .good', '#steps-list .step', '#team-list .person']"
+                                 ".map(s => document.querySelectorAll(s).length)")
+        team_n = page.evaluate("window.SITE.team.items.length")
+        check(P + "преимущества, доставка, что возим, этапы и команда на месте", n_blocks == [4, 3, 8, 5, team_n], str(n_blocks))
+        check(P + "пустая команда — блок скрыт", team_n > 0 or not page.is_visible("#team"))
+        # маршрут по этапам: вверху страницы ещё не пройден, у блока — пройден
+        p0 = page.evaluate("getComputedStyle(document.querySelector('#route')).getPropertyValue('--p')")
+        page.evaluate("document.querySelector('#route').scrollIntoView({block: 'start', behavior: 'instant'})")
+        page.wait_for_timeout(400)
+        p1 = page.evaluate("getComputedStyle(document.querySelector('#route')).getPropertyValue('--p')")
+        check(P + "линия маршрута растёт при прокрутке", float(p0) < float(p1), f"{p0} → {p1}")
+        # строка едет, только когда видна на экране
+        page.evaluate("document.querySelector('#countries-list').scrollIntoView({block: 'center', behavior: 'instant'})")
+        page.wait_for_timeout(300)
+        x0 = page.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('#countries-list')).transform).m41")
+        page.wait_for_timeout(600)
+        x1 = page.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('#countries-list')).transform).m41")
+        check(P + "бегущая строка стран едет", x0 != x1, f"{x0} → {x1}")
+        page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(300)
         for sid in ["#warehouse-list", "#reviews-list"]:
             page.evaluate(f"document.querySelector('{sid}').scrollIntoView({{block: 'center', behavior: 'instant'}})")
             page.wait_for_timeout(1300)
@@ -228,7 +250,8 @@ with sync_playwright() as p:
     page.goto(URL, wait_until="load", timeout=60000)
     raw = page.evaluate("document.body.innerText")
     check("[Без JS] текст страницы виден поисковику",
-          all(x in raw for x in ["Доставка грузов из Китая", "Виды доставки", "Вопросы и ответы", "Сколько идёт доставка?"]))
+          all(x in raw for x in ["Доставка грузов из Китая", "Виды доставки", "Вопросы и ответы", "Сколько идёт доставка?",
+                                 "Что можно привезти из Китая", "Как работает карго"]))
     check("[Без JS] один заголовок h1", page.evaluate("document.querySelectorAll('h1').length") == 1)
     check("[Без JS] canonical и превью для соцсетей",
           page.get_attribute("link[rel=canonical]", "href") and page.get_attribute("meta[property='og:image']", "content"))

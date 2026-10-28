@@ -41,6 +41,8 @@
     shirt: svg('<path d="M20.4 6.6 16 3a4 4 0 0 1-8 0L3.6 6.6a1 1 0 0 0-.3 1.2l1.4 2.9a1 1 0 0 0 1.2.5L8 10.5V20a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-9.5l2.1.7a1 1 0 0 0 1.2-.5l1.4-2.9a1 1 0 0 0-.3-1.2z"/>'),
     cart: svg('<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6.2"/>'),
     sample: svg('<path d="M9 3h6M10 3v6L4.6 18.2A2 2 0 0 0 6.3 21h11.4a2 2 0 0 0 1.7-2.8L14 9V3"/><path d="M7 15h10"/>'),
+    wrench: svg('<path d="M14.7 6.3a4 4 0 0 0 5 5L21 12.6a6 6 0 0 1-7.5 1.7L6 21.8a2.1 2.1 0 0 1-3-3l7.5-7.5a6 6 0 0 1 1.7-7.5z"/>'),
+    brick: svg('<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 12h18M9 5v7M15 12v7"/>'),
     coin: svg('<circle cx="12" cy="12" r="9"/><path d="M14.8 9.2A3 3 0 0 0 12 8c-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2a3 3 0 0 1-2.8-1.2M12 6.5v1.5M12 16v1.5"/>'),
     check: svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
   };
@@ -86,7 +88,7 @@
           description: SEO.description,
           email: C.email || undefined,
           telephone: C.phoneRaw || undefined,
-          areaServed: S.clearance ? S.clearance.countries : undefined,
+          areaServed: S.process ? S.process.countries : undefined,
           sameAs: [C.telegram && "https://t.me/" + C.telegram].filter(Boolean),
         },
         {
@@ -149,6 +151,8 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
 
   const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 10);
+  // при открытии меню шапка всегда видна
+  burger.addEventListener("click", () => header.classList.remove("is-hidden"));
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
@@ -157,49 +161,57 @@
     .map((s) => `<div class="stat"><div class="stat__value">${esc(s.value)}</div><div class="stat__label">${esc(s.label)}</div></div>`)
     .join("");
 
-  const tickerHTML = S.ticker.map((t) => `<span class="ticker__item">${esc(t)}</span>`).join("");
-  $("#ticker").innerHTML = tickerHTML + tickerHTML; // дубль для бесконечной прокрутки
-
-  $("#trust").innerHTML = (S.hero.trust || []).map((t) => `<li>${ICONS.check}${esc(t)}</li>`).join("");
-
-  /* ---------- Карточки ---------- */
-  // linkText пустой — карточка без нижней строки
-  const card = (it, linkText) => `
-    <article class="card reveal">
-      <div class="card__top">
-        <span class="card__icon" aria-hidden="true">${ICONS[it.icon] || esc(it.icon)}</span>
-        ${it.price ? `<span class="chip">${esc(it.price)}</span>` : ""}
+  /* ---------- Виды доставки: карточки с фото ---------- */
+  $("#transport-list").innerHTML = S.transport.items
+    .map((it) => `
+    <article class="mode reveal">
+      <div class="mode__media">
+        ${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.title)}" loading="lazy" width="800" height="600">` : ""}
+        <span class="chip">${esc(it.price)}</span>
       </div>
-      <h3 class="card__title">${esc(it.title)}</h3>
-      <p class="card__text">${esc(it.text)}</p>
-      ${linkText ? `
-      <div class="card__foot">
-        <span class="card__meta">${esc(it.term || "")}</span>
-        <a class="link-arrow" href="#contact" data-topic="${esc(it.title)}">${esc(linkText)} <span>→</span></a>
-      </div>` : ""}
-    </article>`;
+      <div class="mode__body">
+        <h3 class="mode__title"><span class="mode__icon" aria-hidden="true">${ICONS[it.icon] || ""}</span>${esc(it.title)}</h3>
+        <p class="mode__text">${esc(it.text)}</p>
+        <div class="mode__foot">
+          <span class="mode__meta">${esc(it.term || "")}</span>
+          <a class="link-arrow" href="#contact" data-topic="${esc(it.title)}">${esc(S.transport.linkText)} <span>→</span></a>
+        </div>
+      </div>
+    </article>`)
+    .join("");
 
-  $("#transport-list").innerHTML = S.transport.items.map((it) => card(it, S.transport.linkText)).join("");
-  $("#advantages-list").innerHTML = S.advantages.items.map((it) => card(it, S.advantages.linkText)).join("");
-
-  /* ---------- Карго и страны ---------- */
-  const CL = S.clearance;
-  if (CL) {
-    $("#clearance-list").innerHTML = CL.options
-      .map((o) => `
-        <article class="option reveal">
-          <div class="option__head">
-            <span class="card__icon" aria-hidden="true">${ICONS[o.icon] || ""}</span>
-            <span class="chip">${esc(o.tag)}</span>
-          </div>
-          <h3 class="option__title">${esc(o.title)}</h3>
-          <p class="option__text">${esc(o.text)}</p>
-          <ul class="option__points">${o.points.map((pt) => `<li>${ICONS.check}${esc(pt)}</li>`).join("")}</ul>
-          <a class="link-arrow" href="#contact" data-topic="${esc(o.title)}">Рассчитать <span>→</span></a>
-        </article>`)
+  /* ---------- Что возим ---------- */
+  if (S.cargo) {
+    $("#cargo-list").innerHTML = S.cargo.items
+      .map((it) => `
+      <article class="good reveal">
+        <span class="good__icon" aria-hidden="true">${ICONS[it.icon] || ""}</span>
+        <h3 class="good__title">${esc(it.title)}</h3>
+        <p class="good__text">${esc(it.text)}</p>
+      </article>`)
       .join("");
-    $("#countries-list").innerHTML = CL.countries.map((c) => `<li>${ICONS.track}${esc(c)}</li>`).join("");
   }
+
+  /* ---------- Преимущества (в блоке «О компании») ---------- */
+  $("#advantages-list").innerHTML = S.advantages.items
+    .map((it) => `
+      <li class="perk reveal">
+        <span class="perk__icon" aria-hidden="true">${ICONS[it.icon] || ""}</span>
+        <div><h3 class="perk__title">${esc(it.title)}</h3><p class="perk__text">${esc(it.text)}</p></div>
+      </li>`)
+    .join("");
+
+  /* ---------- Как работает карго: этапы и страны ---------- */
+  const PR = S.process;
+  $("#steps-list").innerHTML = PR.steps
+    .map((s, i) => `
+      <li class="step reveal">
+        <span class="step__num">${String(i + 1).padStart(2, "0")}</span>
+        <h3>${esc(s.title)}</h3>
+        <p>${esc(s.text)}</p>
+      </li>`)
+    .join("");
+  $("#countries-list").innerHTML = PR.countries.map((c) => `<li>${esc(c)}</li>`).join("");
 
   /* ---------- Видео ---------- */
   // Видео не грузится, пока его не нажмут: на странице только лёгкая картинка-превью
@@ -299,23 +311,30 @@
   // закрыть по крестику или клику мимо картинки
   lightbox.addEventListener("click", (e) => { if (e.target.tagName !== "IMG") lightbox.close(); });
 
-  /* ---------- О компании ---------- */
-  $("#about-values").innerHTML = S.about.values
-    .map((v) => `<div class="value"><strong>${esc(v.title)}</strong><span>${esc(v.text)}</span></div>`)
-    .join("");
-
-  $("#steps-list").innerHTML = S.steps.items
-    .map((s, i) => `
-      <li class="step reveal">
-        <span class="step__num">${String(i + 1).padStart(2, "0")}</span>
-        <h3>${esc(s.title)}</h3>
-        <p>${esc(s.text)}</p>
-      </li>`)
-    .join("");
+  /* ---------- Команда: фото или инициалы, пока фото нет ---------- */
+  const team = S.team && S.team.items.length ? S.team : null;
+  $("#team").hidden = !team;
+  $("#team-list").innerHTML = "";
+  if (team) {
+    const initials = (name) => name.split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+    $("#team-list").innerHTML = team.items
+      .map((p) => `
+      <figure class="person reveal">
+        <div class="person__photo">${p.photo
+          ? `<img src="${esc(p.photo)}" alt="${esc(p.name)}" loading="lazy" width="400" height="400">`
+          : `<span aria-hidden="true">${esc(initials(p.name))}</span>`}</div>
+        <figcaption>
+          <strong class="person__name">${esc(p.name)}</strong>
+          <span class="person__role">${esc(p.role)}</span>
+          <p class="person__text">${esc(p.text)}</p>
+        </figcaption>
+      </figure>`)
+      .join("");
+  }
 
   const footerList = (items) => items.map((it) => `<li><a href="#contact" data-topic="${esc(it.title)}">${esc(it.title)}</a></li>`).join("");
   $("#footer-transport").innerHTML = footerList(S.transport.items);
-  $("#footer-advantages").innerHTML = footerList(S.advantages.items);
+  $("#footer-nav").innerHTML = S.nav.map((n) => `<li><a href="${esc(n.href)}">${esc(n.label)}</a></li>`).join("");
 
   /* ---------- Вопросы ---------- */
   $("#faq-list").innerHTML = S.faq.items
@@ -355,7 +374,7 @@
   const quick = $("#quick-form");
   quick.hidden = !S.hero.quick;
   if (S.hero.quick) {
-  const countries = [...(CL ? CL.countries : []), "Другая страна"];
+  const countries = [...PR.countries, "Другая страна"];
   const modes = [...(S.contact.modes || []), "Не знаю"];
   let quickMode = modes[modes.length - 1];
 
@@ -390,7 +409,7 @@
     sendLead(quick, e, text);
   });
   }
-  countrySelect.innerHTML = options([...(CL ? CL.countries : []), "Другая страна"]);
+  countrySelect.innerHTML = options([...PR.countries, "Другая страна"]);
 
   // Кнопки «Рассчитать» в карточках подставляют тему в заявку
   document.addEventListener("click", (e) => {
@@ -415,6 +434,63 @@
   if (BUILD) return;
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // Фоновое видео главного экрана. На телефоне — лёгкая версия; при «уменьшении движения»
+  // и режиме экономии трафика остаётся только картинка-постер. За пределами экрана видео на паузе.
+  const heroVideo = $("#hero-video");
+  const saveData = navigator.connection && navigator.connection.saveData;
+  // Видео начинает грузиться после самой страницы, чтобы не тормозить её открытие.
+  const startHeroVideo = () => {
+    heroVideo.muted = true;
+    heroVideo.src = window.matchMedia("(max-width: 768px)").matches ? "assets/video/hero-mobile.mp4" : "assets/video/hero.mp4";
+    heroVideo.preload = "auto";
+    const play = () => { const p = heroVideo.play(); if (p && p.catch) p.catch(() => { /* автозапуск запрещён — остаётся постер */ }); };
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([en]) => { if (en.isIntersecting && !document.hidden) play(); else heroVideo.pause(); })
+        .observe(heroVideo.parentElement);
+    } else play();
+  };
+  if (heroVideo && !calm && !saveData) {
+    if (document.readyState === "complete") startHeroVideo();
+    else window.addEventListener("load", startHeroVideo, { once: true });
+  }
+
+  // Заголовки выезжают по словам из-под «шторки». Только в браузере посетителя:
+  // в index.html для поисковиков текст остаётся обычным.
+  const splitWords = (el) => {
+    let n = 0;
+    const walk = (node) => [...node.childNodes].forEach((ch) => {
+      if (ch.nodeType === 1) return walk(ch);
+      if (ch.nodeType !== 3 || !ch.textContent.trim()) return;
+      const frag = document.createDocumentFragment();
+      ch.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) return frag.append(part);
+        const w = document.createElement("span");
+        const inner = document.createElement("span");
+        w.className = "w";
+        inner.textContent = part;
+        inner.style.setProperty("--wi", n++);
+        w.append(inner);
+        frag.append(w);
+      });
+      ch.replaceWith(frag);
+    });
+    walk(el);
+    el.classList.add("is-split");
+  };
+  if (!calm) $$(".hero__title, .section__title").forEach(splitWords);
+
+  // Кнопки, которые слегка тянутся за курсором
+  if (!calm && window.matchMedia("(hover: hover)").matches) {
+    $$("[data-magnetic]").forEach((el) => {
+      el.addEventListener("pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.2}px, ${(e.clientY - r.top - r.height / 2) * 0.3}px)`;
+      });
+      el.addEventListener("pointerleave", () => { el.style.transform = ""; });
+    });
+  }
+
   // Полоса прокрутки вверху страницы
   const bar = $("#progress");
   let ticking = false;
@@ -425,26 +501,83 @@
   ring.style.strokeDasharray = RING;
   toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" }));
 
-  const paintBar = () => {
+  // Главный экран при прокрутке: видео уходит медленнее страницы, текст растворяется (только на ПК)
+  const hero = $(".hero");
+  const heroInner = $("#hero-inner");
+  const wide = window.matchMedia("(min-width: 1001px)");
+  const paintHero = () => {
+    const y = window.scrollY;
+    const h = hero.offsetHeight;
+    if (y > h) return;
+    const k = y / h;
+    heroVideo.style.transform = `translateY(${y * 0.35}px) scale(${1 + k * 0.08})`;
+    heroInner.style.transform = wide.matches ? `translateY(${y * 0.18}px)` : "";
+    heroInner.style.opacity = wide.matches ? String(Math.max(0, 1 - k * 1.2)) : "";
+  };
+
+  // Шапка прячется, когда листают вниз, и возвращается при прокрутке вверх
+  let lastY = window.scrollY;
+  const paintHeader = () => {
+    const y = window.scrollY;
+    const down = y > lastY && y > window.innerHeight * 0.6 && !document.body.classList.contains("nav-open");
+    if (Math.abs(y - lastY) > 4) header.classList.toggle("is-hidden", down);
+    lastY = y;
+  };
+
+  // Маршрут по этапам: линия и фура едут вместе с прокруткой, пройденные этапы загораются
+  const route = $("#route");
+  const stepEls = $$("#steps-list .step");
+  const paintRoute = () => {
+    const r = route.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (r.height + vh * 0.3)));
+    route.style.setProperty("--p", p.toFixed(3));
+    stepEls.forEach((s, i) => s.classList.toggle("is-active", p >= i / stepEls.length + 0.02 || p > 0.99));
+  };
+  if (!calm) route.classList.add("is-live");
+
+  const paintScroll = () => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const k = max > 0 ? window.scrollY / max : 0;
     bar.style.transform = `scaleX(${k})`;
     ring.style.strokeDashoffset = RING * (1 - k);
     toTop.classList.toggle("is-visible", window.scrollY > window.innerHeight * 0.8);
+    paintHeader();
+    if (!calm) { paintHero(); paintRoute(); }
     ticking = false;
   };
-  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(paintBar); } }, { passive: true });
-  paintBar();
+  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(paintScroll); } }, { passive: true });
+  window.addEventListener("resize", paintScroll);
+  paintScroll();
 
-  // Подсветка карточек за курсором
-  if (!calm && window.matchMedia("(hover: hover)").matches) {
-    document.addEventListener("pointermove", (e) => {
-      const el = e.target.closest(".card, .option, .step, .value, .review, .quick");
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    });
+  // Бегущая строка стран: едет в сторону прокрутки и разгоняется, когда листают быстрее
+  const track = $("#countries-list");
+  if (!calm) {
+    const items = [...track.children];
+    for (let k = 0; k < 2; k++) {
+      items.forEach((li) => { const c = li.cloneNode(true); c.setAttribute("aria-hidden", "true"); track.append(c); });
+    }
+    track.classList.add("is-live");
+    let x = 0, vel = 0, dir = 1, prevY = window.scrollY, running = false;
+    const loop = () => {
+      if (!running) return;
+      const dy = window.scrollY - prevY;
+      prevY = window.scrollY;
+      if (dy) dir = dy > 0 ? 1 : -1;
+      vel = vel * 0.92 + Math.abs(dy) * 0.08;
+      const copy = track.scrollWidth / 3;
+      x -= dir * (0.5 + vel * 0.6);
+      if (x <= -copy) x += copy;
+      if (x > 0) x -= copy;
+      track.style.transform = `translateX(${x}px)`;
+      requestAnimationFrame(loop);
+    };
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([en]) => {
+        running = en.isIntersecting;
+        if (running) { prevY = window.scrollY; requestAnimationFrame(loop); }
+      }).observe(track.parentElement);
+    }
   }
 
   // Числа в полосе сроков отсчитываются от нуля: «от 12 дней», «5–8 дней»
@@ -464,9 +597,6 @@
     requestAnimationFrame(step);
   };
 
-  // Чипы стран выскакивают по очереди
-  $$("#countries-list li").forEach((li, i) => li.style.setProperty("--i", i));
-
   /* ---------- Подсветка пункта меню и появление блоков ---------- */
   $$(".section__head").forEach((el) => el.classList.add("reveal"));
 
@@ -484,8 +614,9 @@
       entries.forEach((en) => {
         if (!en.isIntersecting) return;
         const el = en.target;
-        el.classList.add("is-in", "is-seen"); // is-seen остаётся навсегда — для черты над заголовком и чипов
+        el.classList.add("is-in", "is-seen"); // is-seen остаётся навсегда — для черты над заголовком и слов в нём
         io.unobserve(el);
+        if (el.matches(".mode")) countUp($(".chip", el)); // сроки на фото отсчитываются
         // после анимации возвращаем карточкам их собственный hover
         setTimeout(() => { el.classList.remove("reveal", "is-in"); el.style.transitionDelay = ""; }, 1000);
       });

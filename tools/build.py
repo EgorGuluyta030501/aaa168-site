@@ -4,7 +4,8 @@
    и сохраняет готовую страницу обратно в index.html. Так Яндекс видит весь текст
    сразу, без выполнения JavaScript. Посетителям ничего не меняется: main.js
    при загрузке всё равно заново подставляет тексты из content.js.
-2. Пишет sitemap.xml и robots.txt с адресом сайта из content.js (seo.url).
+2. Пишет sitemap.xml и robots.txt с адресом сайта из content.js (seo.url),
+   а для своего домена — файл CNAME для GitHub Pages.
 
 Запускается сам при коммите (.git/hooks/pre-commit). Вручную:
     python tools/build.py
@@ -80,5 +81,12 @@ today = datetime.date.today().isoformat()
     "Disallow: /tests/\n"
     "Disallow: /tools/\n"
     f"\nSitemap: {url}sitemap.xml\n", encoding="utf-8", newline="\n")
+# Свой домен для GitHub Pages: файл CNAME с адресом. На *.github.io он не нужен.
+host = re.match(r"https?://([^/]+)", url).group(1)
+cname = ROOT / "CNAME"
+if host.endswith(".github.io"):
+    cname.unlink(missing_ok=True)
+else:
+    cname.write_text(host + "\n", encoding="utf-8", newline="\n")
 
 print(f"Готово: index.html ({len(html) // 1024} КБ), sitemap.xml, robots.txt → {url}")

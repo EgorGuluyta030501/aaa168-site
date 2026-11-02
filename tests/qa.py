@@ -2,16 +2,18 @@
 
 Запуск:
     python -m pip install --user playwright
-    python tests/qa.py                          # живой сайт на GitHub Pages
+    python tests/qa.py                          # живой сайт aaa168.ru
     python tests/qa.py http://localhost:8080/   # локальная копия (python -m http.server 8080)
 """
-import json, sys, urllib.parse, urllib.request
+import json
+import re, sys, urllib.parse, urllib.request
 from playwright.sync_api import sync_playwright
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-URL = sys.argv[1] if len(sys.argv) > 1 else "https://egorguluyta030501.github.io/aaa168-site/"
+URL = sys.argv[1] if len(sys.argv) > 1 else "https://aaa168.ru/"
 WA = "8615604281718"
+TG = "https://t.me/aaa168Manager"
 results = []
 
 
@@ -97,7 +99,10 @@ with sync_playwright() as p:
         wa = {l[1] for l in links if l[1] and "wa.me" in l[1]}
         check(P + "WhatsApp-ссылки на правильный номер", wa and all(WA in h for h in wa), str(wa))
         tg = sorted({l[1] for l in links if l[1] and "t.me" in l[1]})
-        check(P + "Telegram-ссылки", tg == ["https://t.me/CARGO_AAA168", "https://t.me/cargo_aaa168cargo"], str(tg))
+        check(P + "Telegram-ссылки: канал, чат, менеджер, база знаний",
+              tg == sorted(["https://t.me/CARGO_AAA168", "https://t.me/cargo_aaa168cargo", TG, "https://t.me/aaa168_1"]), str(tg))
+        check(P + "нет ссылок на Instagram и Facebook",
+              not [l for l in links if l[1] and ("instagram." in l[1] or "facebook." in l[1])])
         order = page.evaluate("[...document.querySelectorAll('main > section[id]')].map(s => s.id)")
         check(P + "«О компании» сразу после главного экрана", order[:1] == ["about"], str(order))
 
@@ -113,7 +118,15 @@ with sync_playwright() as p:
         check(P + "в формах нет полей имени и телефона",
               not page.query_selector("form input[type=tel], form input[name=name], form input[name=phone]"))
         check(P + "есть ссылка на политику конфиденциальности", page.query_selector("footer a[href='privacy.html']"))
-        check(P + "пока нет Telegram менеджера — вторая кнопка скрыта", not page.is_visible(".alt-send"))
+        legal = page.inner_text("footer .footer__legal")
+        check(P + "в подвале реквизиты компании",
+              all(x in legal for x in ["Foshan Yilufa Supply Chain Management", "91440605MAEB4PDM5G", "Nanhai District"]), legal)
+        check(P + "кнопки «Написать менеджеру» ведут в Telegram",
+              page.get_attribute(".hero__actions [data-lead]", "href") == TG
+              and page.evaluate("document.querySelector('.fab').classList.contains('fab--tg')"))
+        check(P + "рядом с заявкой есть запасная кнопка WhatsApp", page.is_visible("#quick-form .alt-send"))
+        check(P + "над кнопкой Telegram есть кнопка WhatsApp",
+              page.is_visible(".fab--mini") and WA in (page.get_attribute(".fab--mini", "href") or ""))
 
         # --- быстрая заявка ---
         page.evaluate("window.__opened=[]")
@@ -123,8 +136,8 @@ with sync_playwright() as p:
         page.click("#quick-form button[type=submit]")
         opened = page.evaluate("window.__opened")
         txt = wa_text(opened[0]) if opened else ""
-        check(P + "быстрая заявка уходит в WhatsApp с данными",
-              opened and WA in opened[0] and all(x in txt for x in ["Казахстан", "Ж/Д", "300 кг"]),
+        check(P + "быстрая заявка уходит менеджеру в Telegram с данными",
+              opened and opened[0].startswith(TG + "?text=") and all(x in txt for x in ["Казахстан", "Ж/Д", "300 кг"]),
               txt.replace("\n", " | "))
 
         # --- анимации ---
@@ -205,8 +218,8 @@ with sync_playwright() as p:
         page.click("#lead-form button.btn[type=submit]")
         opened = page.evaluate("window.__opened")
         txt = wa_text(opened[0]) if opened else ""
-        check(P + "основная форма уходит в WhatsApp со всеми полями",
-              all(x in txt for x in ["Беларусь", "Авиа", "Бюджет", "мебель, 300 кг"]),
+        check(P + "основная форма уходит менеджеру в Telegram со всеми полями",
+              opened and opened[0].startswith(TG + "?text=") and all(x in txt for x in ["Беларусь", "Авиа", "Бюджет", "мебель, 300 кг"]),
               txt.replace("\n", " | "))
         # попытка внедрить HTML через форму не должна попасть в страницу
         page.fill("#form-message", "<img src=x onerror=alert(1)>")
@@ -221,27 +234,28 @@ with sync_playwright() as p:
         check(P + "за всё время нет JS-ошибок", not errors, "; ".join(errors[:3]))
         ctx.close()
 
-    # --- если в content.js указать Telegram менеджера, заявки уходят туда ---
+    # --- если в content.js стереть Telegram менеджера, заявки уходят в WhatsApp ---
     ctx = browser.new_context(viewport={"width": 1366, "height": 800})
     page = ctx.new_page()
 
-    def with_manager(route):
-        body = route.fetch().text().replace('manager: ""', 'manager: "test_manager"')
+    def without_manager(route):
+        body = re.sub(r'manager: "[^"]*"', 'manager: ""', route.fetch().text(), count=1)
         route.fulfill(body=body, content_type="application/javascript; charset=utf-8")
-    page.route("**/content.js*", with_manager)
+    page.route("**/content.js*", without_manager)
     page.add_init_script("window.__opened=[]; window.open=(u)=>{window.__opened.push(u); return null;};")
     page.goto(URL, wait_until="load", timeout=60000)
     page.wait_for_timeout(800)
-    check("[Telegram] кнопка «Написать менеджеру» ведёт в Telegram",
-          page.get_attribute(".hero__actions [data-lead]", "href") == "https://t.me/test_manager"
-          and page.evaluate("document.querySelector('.fab').classList.contains('fab--tg')"))
+    check("[Без менеджера] кнопка «Написать менеджеру» ведёт в WhatsApp",
+          WA in (page.get_attribute(".hero__actions [data-lead]", "href") or "")
+          and not page.evaluate("document.querySelector('.fab').classList.contains('fab--tg')"))
+    check("[Без менеджера] запасная кнопка и строка Telegram скрыты",
+          not page.is_visible(".alt-send") and not page.is_visible("[data-row=manager]")
+          and not page.is_visible(".fab--mini"))
     page.fill("#quick-weight", "50")
     page.click("#quick-form button.quick__btn")
-    page.click("#quick-form .alt-send")
     opened = page.evaluate("window.__opened")
-    check("[Telegram] заявка уходит в Telegram менеджера, вторая кнопка — в WhatsApp",
-          len(opened) == 2 and opened[0].startswith("https://t.me/test_manager?text=") and "50 кг" in wa_text(opened[0])
-          and WA in opened[1], str(opened))
+    check("[Без менеджера] заявка уходит в WhatsApp",
+          len(opened) == 1 and WA in opened[0] and "50 кг" in wa_text(opened[0]), str(opened))
     ctx.close()
 
     # --- что видит поисковый робот без JavaScript ---

@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /tests/
 Disallow: /tools/
 
-Sitemap: https://egorguluyta030501.github.io/aaa168-site/sitemap.xml
+Sitemap: https://aaa168.ru/sitemap.xml

@@ -603,7 +603,8 @@ select.input {
 .footer__bottom p:first-child { max-width: 900px; line-height: 1.6; }
 .footer__bottom a { color: var(--on-dark-muted); text-decoration: underline; text-underline-offset: 3px; }
 .footer__bottom a:hover { color: #fff; }
-.footer__disclaimer { flex-basis: 100%; font-size: 12px; line-height: 1.6; }
+.footer__legal, .footer__disclaimer { flex-basis: 100%; font-size: 12px; line-height: 1.6; }
+.footer__legal { overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .footer__grid { grid-template-columns: 1fr 1fr; }
   .footer__brand { grid-column: 1 / -1; }
@@ -629,9 +630,14 @@ select.input {
 .fab--tg::before { border-color: #2aabee; }
 .fab--tg .fab__tg { display: block; margin-left: -3px; }
 .fab--tg .fab__wa { display: none; }
+/* Запасная кнопка WhatsApp над Telegram: меньше и без пульсации */
+.fab--mini { right: 22px; bottom: 88px; width: 50px; height: 50px; }
+.fab--mini::before { display: none; }
+.fab--mini[hidden] { display: none; }
+.fab--mini[hidden] ~ .totop { bottom: 90px; }
 
 .totop {
-  position: fixed; right: 23px; bottom: 90px; z-index: 40;
+  position: fixed; right: 23px; bottom: 150px; z-index: 40;
   width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%;
   display: grid; place-items: center; cursor: pointer;
   background: #fff; color: var(--navy);

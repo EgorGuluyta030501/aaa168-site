@@ -82,14 +82,20 @@
         {
           "@type": "Organization",
           name: S.brand.name,
-          legalName: S.brand.company,
+          legalName: S.brand.legalName || S.brand.company,
+          alternateName: S.brand.legalName ? S.brand.company : undefined,
+          taxID: S.brand.regCode || undefined,
+          address: S.brand.address ? {
+            "@type": "PostalAddress", streetAddress: S.brand.address,
+            addressLocality: "Foshan", addressRegion: "Guangdong", addressCountry: "CN",
+          } : undefined,
           url: SEO.url,
           logo: abs(S.brand.logo),
           description: SEO.description,
           email: C.email || undefined,
           telephone: C.phoneRaw || undefined,
           areaServed: S.process ? S.process.countries : undefined,
-          sameAs: [C.telegram && "https://t.me/" + C.telegram].filter(Boolean),
+          sameAs: [C.telegram, C.knowledgeBase].filter(Boolean).map((h) => "https://t.me/" + h),
         },
         {
           "@type": "FAQPage",
@@ -122,8 +128,9 @@
   // пустой контакт в content.js — ссылка на него скрывается
   const bind = (sel, value, apply) => $$(sel).forEach((el) => { el.hidden = !value; if (value) apply(el); });
   bind("[data-lead]", C.manager || C.whatsapp, (el) => { el.href = leadLink(); });
-  $$(".fab").forEach((el) => el.classList.toggle("fab--tg", Boolean(C.manager)));
-  bind("[data-alt]", C.manager && C.whatsapp, () => {});
+  $$(".fab[data-lead]").forEach((el) => el.classList.toggle("fab--tg", Boolean(C.manager)));
+  // Запасной WhatsApp виден, только когда главный канал — Telegram менеджера
+  bind("[data-alt]", C.manager && C.whatsapp, (el) => { if (el.matches("a")) el.href = waLink(); });
   bind("[data-tgmanager]", C.manager, (el) => { el.textContent = "@" + C.manager; el.href = tgLink(); });
   bind("[data-phone]", C.phone, (el) => { el.textContent = C.phone; el.href = "tel:" + C.phoneRaw; });
   bind("[data-phone2]", C.phone2, (el) => { el.textContent = C.phone2; el.href = "tel:" + C.phone2Raw; });
@@ -133,6 +140,7 @@
   $$("[data-row]").forEach((el) => { el.hidden = !C[el.dataset.row]; });
   bind("[data-tg]", C.telegram, (el) => { el.href = "https://t.me/" + C.telegram; });
   bind("[data-tgchat]", C.telegramChat, (el) => { el.href = "https://t.me/" + C.telegramChat; });
+  bind("[data-tgkb]", C.knowledgeBase, (el) => { el.href = "https://t.me/" + C.knowledgeBase; });
   bind("[data-email]", C.email, (el) => { el.textContent = C.email; el.href = "mailto:" + C.email; });
   $("#year").textContent = new Date().getFullYear();
 

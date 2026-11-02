@@ -13,6 +13,11 @@ window.SITE = {
     suffix: "",                 // хвост после названия (красным), например ".ru"
     tagline: "КАРГО ИЗ КИТАЯ",  // подпись под названием
     company: "ООО «И ЛУ ФА»",   // юрлицо — показывается в подвале
+    // Реквизиты для подвала и поисковиков. regCode — единый код социального кредита КНР (USCC),
+    // китайский аналог ИНН и ОГРН сразу. Иероглифы сюда не писать: только латиница.
+    legalName: "Foshan Yilufa Supply Chain Management Co., Ltd",
+    regCode: "91440605MAEB4PDM5G",
+    address: "Room 103, 1st Floor, No. 11 Shuisongji Industrial Zone, Sanheng Road, Zhoucun Community, Shuizhen, Nanhai District, Foshan City, Guangdong, China",
   },
 
   // Пустой контакт ("") на сайте не показывается
@@ -22,13 +27,16 @@ window.SITE = {
     phone2: "+86 130 8470 6555",      // второй телефон / WeChat
     phone2Raw: "+8613084706555",
     wechat: "+86 130 3042 0116, +86 130 8470 6555",
-    whatsapp: "8615604281718",        // только цифры — сюда уходят заявки с формы
+    whatsapp: "8615604281718",        // только цифры — запасной способ отправить заявку
     whatsappLabel: "+86 156 0428 1718",
     // Личный Telegram менеджера без @ — сюда в первую очередь уходят заявки с сайта
-    // (WhatsApp в России блокируется). Пока пусто — заявки идут в WhatsApp.
-    manager: "",
+    // (WhatsApp в России блокируется). Если стереть — заявки пойдут в WhatsApp.
+    manager: "aaa168Manager",
     telegram: "CARGO_AAA168",         // Telegram-канал без @
     telegramChat: "cargo_aaa168cargo",// Telegram-чат без @
+    knowledgeBase: "aaa168_1",        // Telegram-канал «База знаний» без @
+    // Instagram на сайт не ставим: Meta признана в РФ экстремистской, за ссылки и логотип
+    // Instagram на сайтах компаний бывают штрафы. Из Instagram на сайт ссылаться можно.
     email: "fsyilufa@yeah.net",
     hours: "Работаем без выходных · отвечаем в течение часа",
   },
@@ -36,7 +44,7 @@ window.SITE = {
   // Для поисковиков. url — адрес сайта со слешем в конце: после покупки домена
   // поменяйте его здесь, остальное (sitemap, превью ссылок) обновится само.
   seo: {
-    url: "https://egorguluyta030501.github.io/aaa168-site/",
+    url: "https://aaa168.ru/",
     image: "assets/og-image.jpg",       // картинка-превью, когда ссылку кидают в мессенджер
     yandexVerification: "",             // код из Яндекс Вебмастера (meta yandex-verification)
     googleVerification: "",             // код из Google Search Console

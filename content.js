@@ -46,8 +46,8 @@ window.SITE = {
   seo: {
     url: "https://aaa168.ru/",
     image: "assets/og-image.jpg",       // картинка-превью, когда ссылку кидают в мессенджер
-    yandexVerification: "",             // код из Яндекс Вебмастера (meta yandex-verification)
-    googleVerification: "",             // код из Google Search Console
+    yandexVerification: "bbee4e153ac7a867",           // код из Яндекс Вебмастера (meta yandex-verification)
+    googleVerification: "xVJ8zcZCKxg_kfss9caiqpd9g6Q6jOqm8DNPhcdQmBU",           // код из Google Search Console
     title: "Карго AAA168 — доставка грузов из Китая в Россию и СНГ | ООО «И ЛУ ФА»",
     description: "Доставка грузов из Китая в Россию, Казахстан, Беларусь и страны СНГ. Карго-доставка под ключ: авто от 12 дней, ж/д от 16 дней, авиа 5–8 дней. Фотоотчёты, страхование, личный менеджер.",
   },

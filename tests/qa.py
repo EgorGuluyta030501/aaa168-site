@@ -143,7 +143,7 @@ with sync_playwright() as p:
         # --- анимации ---
         page.wait_for_timeout(1500)
         stats = page.evaluate("[...document.querySelectorAll('.stat__value')].map(e => e.textContent)")
-        check(P + "цифры досчитались до конца", stats[:3] == ["от 12 дней", "от 16 дней", "5–8 дней"], str(stats))
+        check(P + "цифры досчитались до конца", stats[:3] == ["от 14 дней", "от 16 дней", "5–8 дней"], str(stats))
         page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)"); page.wait_for_timeout(500)
         sc = page.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('#progress')).transform).a")
         check(P + "полоса прокрутки растёт", 0.3 < sc < 0.7, str(sc))
@@ -284,6 +284,41 @@ with sync_playwright() as p:
     page.goto(URL + "privacy.html", wait_until="load")
     check("[Политика] страница с текстом и ссылкой на главную",
           "Политика конфиденциальности" in page.title() and page.query_selector("a[href='./']"))
+
+    # --- отдельные страницы под запросы (landings.js): ссылки на них — в подвале главной ---
+    page.goto(URL, wait_until="load")
+    slugs = page.eval_on_selector_all("#footer-landings a", "els => els.map(a => a.getAttribute('href'))")
+    check("[Страницы] в подвале главной есть ссылки на направления", len(slugs) >= 5, str(slugs))
+    sitemap = urllib.request.urlopen(URL + "sitemap.xml", timeout=30).read().decode()
+    check("[Страницы] все направления есть в sitemap.xml", all(f"/{s}</loc>" in sitemap for s in slugs))
+    phone = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    for ctx_, label in [(ctx, "ПК"), (phone, "Телефон")]:
+        lp_page = ctx_.new_page()
+        for s in slugs:
+            bad = []
+            lp_page.on("response", lambda r: r.status >= 400 and bad.append(f"{r.status} {r.url}"))
+            lp_page.goto(URL + s, wait_until="load")
+            P = f"[{s} · {label}] "
+            if label == "ПК":
+                ld = lp_page.evaluate("document.querySelector('script[type=\"application/ld+json\"]')?.textContent")
+                try:
+                    types = [g["@type"] for g in json.loads(ld)["@graph"]]
+                except Exception:
+                    types = []
+                cta = lp_page.get_attribute(".lp-hero .btn--primary", "href") or ""
+                check(P + "заголовок, описание, один h1, canonical",
+                      lp_page.title() and lp_page.get_attribute("meta[name=description]", "content")
+                      and lp_page.evaluate("document.querySelectorAll('h1').length") == 1
+                      and lp_page.get_attribute("link[rel=canonical]", "href") == "https://aaa168.ru/" + s)
+                check(P + "таблица цен и вопросы-ответы", lp_page.query_selector(".lp-table td") and lp_page.query_selector(".faq details"))
+                check(P + "schema.org: услуга, крошки, FAQ", {"Service", "BreadcrumbList", "FAQPage"} <= set(types), str(types))
+                check(P + "кнопка расчёта ведёт в Telegram менеджера с текстом заявки",
+                      cta.startswith(TG + "?text=") and wa_text(cta), cta)
+            check(P + "нет горизонтальной прокрутки",
+                  lp_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+            check(P + "все файлы загрузились", not bad, "; ".join(bad))
+        lp_page.close()
+    phone.close()
     ctx.close()
     browser.close()
 

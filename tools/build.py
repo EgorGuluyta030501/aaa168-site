@@ -4,7 +4,9 @@
    и сохраняет готовую страницу обратно в index.html. Так Яндекс видит весь текст
    сразу, без выполнения JavaScript. Посетителям ничего не меняется: main.js
    при загрузке всё равно заново подставляет тексты из content.js.
-2. Пишет sitemap.xml и robots.txt с адресом сайта из content.js (seo.url),
+2. Собирает отдельные страницы под поисковые запросы из landings.js
+   (tools/landings.py) и ставит ссылки на них в подвал главной.
+3. Пишет sitemap.xml и robots.txt с адресом сайта из content.js (seo.url),
    а для своего домена — файл CNAME для GitHub Pages.
 
 Запускается сам при коммите (.git/hooks/pre-commit). Вручную:
@@ -12,6 +14,7 @@
 """
 import datetime, mimetypes, pathlib, re, sys
 from playwright.sync_api import sync_playwright
+import landings
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -53,8 +56,15 @@ with sync_playwright() as p:
         body.append('\\n');
         return '<!doctype html>\\n' + root.outerHTML + '\\n';
     }""")
-    seo = page.evaluate("window.SITE.seo")
+    site = page.evaluate("window.SITE")
+    seo = site["seo"]
+    page.add_script_tag(url=BASE + "landings.js")
+    lps = page.evaluate("window.LANDINGS || []")
     browser.close()
+
+# Ссылки на отдельные страницы — в подвал главной
+html = re.sub(r'(<ul id="footer-landings">).*?(</ul>)',
+              lambda m: m.group(1) + landings.footer_links(lps) + m.group(2), html, flags=re.S)
 
 # Проверки, чтобы не сохранить сломанную страницу
 problems = []
@@ -68,13 +78,15 @@ if problems:
     sys.exit("index.html не изменён: " + "; ".join(problems))
 
 INDEX.write_text(html, encoding="utf-8", newline="\n")
+version = re.search(r"style\.css\?v=(\d+)", html).group(1)
+slugs = landings.build(ROOT, lps, site, version)
 
 url = seo["url"]
 today = datetime.date.today().isoformat()
 (ROOT / "sitemap.xml").write_text(
     '<?xml version="1.0" encoding="UTF-8"?>\n'
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    + "".join(f"  <url><loc>{url}{pg}</loc><lastmod>{today}</lastmod></url>\n" for pg in PAGES)
+    + "".join(f"  <url><loc>{url}{pg}</loc><lastmod>{today}</lastmod></url>\n" for pg in PAGES + [s + "/" for s in slugs])
     + "</urlset>\n", encoding="utf-8", newline="\n")
 (ROOT / "robots.txt").write_text(
     "User-agent: *\n"
@@ -89,4 +101,4 @@ if host.endswith(".github.io"):
 else:
     cname.write_text(host + "\n", encoding="utf-8", newline="\n")
 
-print(f"Готово: index.html ({len(html) // 1024} КБ), sitemap.xml, robots.txt → {url}")
+print(f"Готово: index.html ({len(html) // 1024} КБ), страниц из landings.js: {len(slugs)}, sitemap.xml, robots.txt → {url}")

@@ -15,3 +15,6 @@
 - **Для Яндекса** `tools/build.py` «впекает» тексты из content.js в index.html и пишет sitemap.xml и robots.txt.
   Запускается сам при коммите; вручную: `python tools/build.py`.
 - **После покупки домена** поменяйте `seo.url` в content.js и впишите код из Яндекс Вебмастера в `seo.yandexVerification`.
+- **IndexNow** — файл `db2de328b484e3d5dd98bb6f47bc0000.txt` в корне: ключ, по которому Яндекс и Bing принимают
+  уведомления об изменённых страницах. Не удалять. После правок сайта:
+  `curl "https://yandex.com/indexnow?url=https://aaa168.ru/&key=db2de328b484e3d5dd98bb6f47bc0000"`.
